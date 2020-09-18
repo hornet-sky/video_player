@@ -19,6 +19,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
@@ -27,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private ConstraintLayout controllerLayout;
     private ImageView playerStatusImageView;
     private SeekBar playerProgressSeekBar;
+    private TextView playRemainingTimeTextView;
     private MyViewModel vm;
 
     public MainActivity() {
@@ -44,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
         controllerLayout = findViewById(R.id.controllerLayout);
         playerStatusImageView = findViewById(R.id.playerStatusImageView);
         playerProgressSeekBar = findViewById(R.id.playerProgressSeekBar);
+        playRemainingTimeTextView = findViewById(R.id.playRemainingTimeTextView);
 
         vm = new ViewModelProvider(this, new ViewModelProvider.AndroidViewModelFactory(getApplication()))
                 .get(MyViewModel.class);
@@ -86,6 +89,24 @@ public class MainActivity extends AppCompatActivity {
             public void onChanged(Integer currPosition) {
                 Log.w("myTag2", "VideoCurrentPosition.Observer.onChanged [currPosition=" + currPosition + "]");
                 playerProgressSeekBar.setProgress(currPosition);
+                playRemainingTimeTextView.setText(calcTime(playerProgressSeekBar.getMax() - currPosition));
+            }
+        });
+
+        vm.getPlayerStatus().observe(this, new Observer<PlayerStatus>() {
+            @Override
+            public void onChanged(PlayerStatus playerStatus) {
+                Log.w("myTag4", "PlayerStatus.Observer.onChanged [playerStatus=" + playerStatus + "]");
+                switch(playerStatus) {
+                    case PLAYING:
+                        playerStatusImageView.setImageResource(R.drawable.ic_baseline_pause);
+                        break;
+                    case COMPLETED:
+                        playerStatusImageView.setImageResource(R.drawable.ic_baseline_replay);
+                        break;
+                    default:
+                        playerStatusImageView.setImageResource(R.drawable.ic_baseline_play);
+                }
             }
         });
 
@@ -168,5 +189,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    private String calcTime(Integer progress) {
+        if(progress == null) {
+            return "";
+        }
+        return progress / 1000 / 60 + ":" + progress / 1000 % 60;
     }
 }

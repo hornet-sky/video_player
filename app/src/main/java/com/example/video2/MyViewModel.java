@@ -2,7 +2,6 @@ package com.example.video2;
 
 import android.app.Application;
 import android.media.MediaPlayer;
-import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
@@ -22,6 +21,7 @@ public class MyViewModel extends AndroidViewModel {
     private MutableLiveData<Integer> videoBufferingPercent = new MutableLiveData<>();
     private MutableLiveData<Integer> videoDuration = new MutableLiveData<>();
     private MutableLiveData<Integer> videoCurrentPosition = new MutableLiveData<>();
+    private MutableLiveData<PlayerStatus> playerStatus = new MutableLiveData<>();
     private Handler handler = new android.os.Handler();
     private Runnable runnable = new Runnable() {
         @Override
@@ -50,17 +50,17 @@ public class MyViewModel extends AndroidViewModel {
         mediaPlayer.setOnVideoSizeChangedListener(new MediaPlayer.OnVideoSizeChangedListener() {
             @Override
             public void onVideoSizeChanged(MediaPlayer mediaPlayer, int width, int height) {
-                int duration = mediaPlayer.getDuration();
-                Log.w("myTag2", "mediaPlayer.onVideoSizeChanged [w=" + width + ", h=" + height + ", duration=" + duration + "]");
+                Log.w("myTag2", "mediaPlayer.onVideoSizeChanged [w=" + width + ", h=" + height + "]");
                 videoResolution.setValue(new Pair(width, height));
-                videoDuration.setValue(duration);
             }
         });
         mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mediaPlayer) {
-                Log.w("myTag", "mediaPlayer.onPrepared");
-                mediaPlayer.setLooping(true);
+                int duration = mediaPlayer.getDuration();
+                Log.w("myTag", "mediaPlayer.onPrepared - duration " + duration);
+                videoDuration.setValue(duration);
+                // mediaPlayer.setLooping(true);
                 playerStart();
             }
         });
@@ -70,6 +70,13 @@ public class MyViewModel extends AndroidViewModel {
                 Log.e("myTag", "mediaPlayer.onError [i=" + i + ", i1=" + i1 + "]");
                 // playerStop();
                 return true; // 表示已经解决，不再触发OnCompletionListener监听
+            }
+        });
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                Log.e("myTag4", "mediaPlayer.onCompletion");
+                playerStatus.setValue(PlayerStatus.COMPLETED);
             }
         });
 
@@ -93,11 +100,13 @@ public class MyViewModel extends AndroidViewModel {
 
     public void playerStart() {
         mediaPlayer.start();
+        playerStatus.setValue(PlayerStatus.PLAYING);
         handler.postDelayed(runnable, 0);
     }
 
     public void playerPause() {
         mediaPlayer.pause();
+        playerStatus.setValue(PlayerStatus.PAUSE);
         handler.removeCallbacks(runnable);
     }
 
@@ -134,7 +143,15 @@ public class MyViewModel extends AndroidViewModel {
         return videoDuration;
     }
 
-    public MutableLiveData<Integer> getVideoCurrentPosition() {
+    public LiveData<Integer> getVideoCurrentPosition() {
         return videoCurrentPosition;
     }
+
+    public LiveData<PlayerStatus> getPlayerStatus() {
+        return playerStatus;
+    }
+}
+
+enum PlayerStatus {
+    PLAYING, PAUSE, COMPLETED
 }

@@ -28,6 +28,15 @@
             android:layout_height="match_parent"
             android:layout_weight="10"
             android:progressDrawable="@drawable/player_progress_seek_bar_style" />
+
+        <TextView
+            android:id="@+id/playRemainingTimeTextView"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:gravity="center"
+            android:textColor="@android:color/background_light"
+            tools:text="16:56" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
