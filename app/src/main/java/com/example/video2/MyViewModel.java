@@ -9,15 +9,18 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.core.util.Pair;
 import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.OnLifecycleEvent;
 
 import java.io.IOException;
 
-public class MyViewModel extends AndroidViewModel {
-    private MyMediaPlayer mediaPlayer = new MyMediaPlayer();
+public class MyViewModel extends AndroidViewModel implements LifecycleObserver {
+    private MediaPlayer mediaPlayer = new MediaPlayer();
     private MutableLiveData<Integer> progressBarVisibility = new MutableLiveData<>();
-    private MutableLiveData<Pair> videoResolution = new MutableLiveData<>();
+    private MutableLiveData<Pair<Integer, Integer>> videoResolution = new MutableLiveData<>();
     private MutableLiveData<Integer> videoBufferingPercent = new MutableLiveData<>();
     private MutableLiveData<Integer> videoDuration = new MutableLiveData<>();
     private MutableLiveData<Integer> videoCurrentPosition = new MutableLiveData<>();
@@ -51,7 +54,7 @@ public class MyViewModel extends AndroidViewModel {
             @Override
             public void onVideoSizeChanged(MediaPlayer mediaPlayer, int width, int height) {
                 Log.w("myTag2", "mediaPlayer.onVideoSizeChanged [w=" + width + ", h=" + height + "]");
-                videoResolution.setValue(new Pair(width, height));
+                videoResolution.setValue(new Pair<>(width, height));
             }
         });
         mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
@@ -98,28 +101,25 @@ public class MyViewModel extends AndroidViewModel {
         mediaPlayer.release();
     }
 
+    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
     public void playerStart() {
         mediaPlayer.start();
         playerStatus.setValue(PlayerStatus.PLAYING);
         handler.postDelayed(runnable, 0);
     }
 
+    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
     public void playerPause() {
         mediaPlayer.pause();
         playerStatus.setValue(PlayerStatus.PAUSE);
         handler.removeCallbacks(runnable);
     }
 
-    public void playerStop() {
-        mediaPlayer.stop();
-        progressBarVisibility.setValue(View.INVISIBLE);
-    }
-
     public void seekTo(int progress) {
         mediaPlayer.seekTo(progress); // 有时候seek到的位置和实际播放的位置有偏差，那是因为视频的关键帧太稀疏了，实际播放时只能找到就近关键帧的位置开始播放。
     }
 
-    public MyMediaPlayer getMediaPlayer() {
+    public MediaPlayer getMediaPlayer() {
         return mediaPlayer;
     }
 
@@ -127,7 +127,7 @@ public class MyViewModel extends AndroidViewModel {
         return progressBarVisibility;
     }
 
-    public LiveData<Pair> getVideoResolution() {
+    public LiveData<Pair<Integer, Integer>> getVideoResolution() {
         return videoResolution;
     }
 

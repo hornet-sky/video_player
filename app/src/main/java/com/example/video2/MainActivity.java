@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider;
 import android.app.Activity;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.SurfaceHolder;
@@ -25,11 +26,18 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private SurfaceView surfaceView;
     private FrameLayout surfaceFrame;
-    private ConstraintLayout controllerLayout;
     private ImageView playerStatusImageView;
     private SeekBar playerProgressSeekBar;
     private TextView playRemainingTimeTextView;
+    private ConstraintLayout controllerLayout;
     private MyViewModel vm;
+    private Handler handler = new Handler();
+    private Runnable hideControllerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            controllerLayout.setVisibility(View.INVISIBLE);
+        }
+    };
 
     public MainActivity() {
         Log.w("myTag", "MainActivity.constructor"); // 每次旋转手机屏幕Activity都会重新构建
@@ -43,10 +51,10 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         surfaceView = findViewById(R.id.surfaceView);
         surfaceFrame = findViewById(R.id.surfaceFrame);
-        controllerLayout = findViewById(R.id.controllerLayout);
         playerStatusImageView = findViewById(R.id.playerStatusImageView);
         playerProgressSeekBar = findViewById(R.id.playerProgressSeekBar);
         playRemainingTimeTextView = findViewById(R.id.playRemainingTimeTextView);
+        controllerLayout = findViewById(R.id.controllerLayout);
 
         vm = new ViewModelProvider(this, new ViewModelProvider.AndroidViewModelFactory(getApplication()))
                 .get(MyViewModel.class);
@@ -110,7 +118,19 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        this.getLifecycle().addObserver(vm.getMediaPlayer()); // 切换到后台时 视频停止播放；切回前台时 视频恢复播放
+        this.getLifecycle().addObserver(vm); // 切换到后台时 视频停止播放；切回前台时 视频恢复播放
+
+        surfaceFrame.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(controllerLayout.getVisibility() == View.VISIBLE) {
+                    controllerLayout.setVisibility(View.INVISIBLE);
+                } else {
+                    controllerLayout.setVisibility(View.VISIBLE);
+                    hideControllerAfter(3);
+                }
+            }
+        });
 
         surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
@@ -140,11 +160,28 @@ public class MainActivity extends AppCompatActivity {
             public void onStartTrackingTouch(SeekBar seekBar) {
                 Log.w("myTag3", "playerProgressSeekBar.onStartTrackingTouch");
                 vm.playerPause();
+                handler.removeCallbacks(hideControllerRunnable);
             }
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 Log.w("myTag3", "playerProgressSeekBar.onStopTrackingTouch");
                 vm.playerStart();
+                handler.postDelayed(hideControllerRunnable, 3 * 1000);
+            }
+        });
+
+        playerStatusImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                PlayerStatus playerStatus = vm.getPlayerStatus().getValue();
+                switch(playerStatus) {
+                    case PLAYING:
+                        vm.playerPause();
+                        break;
+                    default:
+                        vm.playerStart();
+                }
+                hideControllerAfter(3);
             }
         });
     }
@@ -158,6 +195,11 @@ public class MainActivity extends AppCompatActivity {
             hideSystemUI(); // 实现“全屏”
             vm.emmitVideoResolution(); // 隐藏顶部状态栏后surface会在高度上有拉伸，因此需要重新触发调整宽度
         }
+    }
+
+    private void hideControllerAfter(int seconds) {
+        handler.removeCallbacks(hideControllerRunnable);
+        handler.postDelayed(hideControllerRunnable, seconds * 1000);
     }
 
     private void hideSystemUI() {
